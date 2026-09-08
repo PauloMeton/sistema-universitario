@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar — Portal Acadêmico</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main style="padding-top:3rem">
+    <h1>Portal Acadêmico</h1>
+    <p class="eyebrow">Entre com seu email institucional para acessar matrícula, frequência e documentos.</p>
+
+    <form id="form-login">
+      <div>
+        <label for="email">Email</label>
+        <input type="email" id="email" required>
+      </div>
+      <div>
+        <label for="senha">Senha</label>
+        <input type="password" id="senha" required>
+      </div>
+      <div id="mensagem" class="mensagem"></div>
+      <button type="submit" class="btn">Entrar</button>
+    </form>
+
+    <p style="margin-top:1.5rem; font-size:0.9rem;">
+      Ainda não tem conta? <a href="cadastro.html">Cadastre-se</a>
+    </p>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const mensagem = document.getElementById('mensagem');
+      mensagem.className = 'mensagem';
+
+      try {
+        const dados = await api.login({
+          email: document.getElementById('email').value,
+          senha: document.getElementById('senha').value,
+        });
+        salvarSessao(dados.token, dados.usuario);
+        window.location.href = 'dashboard.html';
+      } catch (erro) {
+        mensagem.textContent = erro.message;
+        mensagem.className = 'mensagem erro';
+      }
+    });
+  </script>
+</body>
+</html>

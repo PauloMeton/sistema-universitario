@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel — Portal Acadêmico</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <h1>Olá, <span id="nome-usuario"></span></h1>
+    <p class="eyebrow">Resumo das suas matrículas e pendências.</p>
+
+    <h2 style="margin-top:2rem">Matrículas ativas</h2>
+    <div id="lista-matriculas"><p>Carregando...</p></div>
+
+    <h2 style="margin-top:2rem">Documentos</h2>
+    <div id="lista-documentos"><p>Carregando...</p></div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    exigirLogin();
+    montarNavegacao('dashboard.html');
+    document.getElementById('nome-usuario').textContent = usuarioLogado()?.nome || '';
+
+    async function carregar() {
+      const matriculasEl = document.getElementById('lista-matriculas');
+      const documentosEl = document.getElementById('lista-documentos');
+
+      try {
+        const { matriculas } = await api.minhasMatriculas();
+        matriculasEl.innerHTML = matriculas.length
+          ? matriculas.map(m => `
+              <div class="linha-item">
+                <span>${m.disciplina_nome}</span>
+                <span class="tag">${m.status}</span>
+              </div>`).join('')
+          : '<p>Nenhuma matrícula ativa ainda.</p>';
+      } catch (erro) {
+        matriculasEl.innerHTML = `<p>${erro.message}</p>`;
+      }
+
+      try {
+        const { documentos } = await api.meusDocumentos();
+        documentosEl.innerHTML = documentos.length
+          ? documentos.map(d => `
+              <div class="linha-item">
+                <span>${d.tipo}</span>
+                <span class="tag ${d.status_validacao}">${d.status_validacao}</span>
+              </div>`).join('')
+          : '<p>Nenhum documento enviado ainda.</p>';
+      } catch (erro) {
+        documentosEl.innerHTML = `<p>${erro.message}</p>`;
+      }
+    }
+
+    carregar();
+  </script>
+</body>
+</html>

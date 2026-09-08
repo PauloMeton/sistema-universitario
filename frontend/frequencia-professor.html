@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lançar frequência — Portal Acadêmico</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <h1>Lançar frequência</h1>
+    <p class="eyebrow">Escolha a disciplina e a data da aula para marcar presença dos alunos.</p>
+
+    <form id="form-filtro" style="flex-direction:row; gap:0.75rem; align-items:flex-end;">
+      <div style="flex:1">
+        <label for="disciplina_id">Disciplina</label>
+        <select id="disciplina_id" required></select>
+      </div>
+      <div>
+        <label for="data_aula">Data da aula</label>
+        <input type="date" id="data_aula" required>
+      </div>
+      <button type="submit" class="btn secundario">Carregar turma</button>
+    </form>
+
+    <div id="mensagem" class="mensagem" style="margin-top:1rem"></div>
+
+    <form id="form-presenca">
+      <div id="lista-alunos" style="margin-top:1.5rem"><p>Selecione uma disciplina e uma data.</p></div>
+      <button type="submit" class="btn" id="btn-salvar" style="display:none">Salvar presenças</button>
+    </form>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    exigirLogin();
+    montarNavegacao('frequencia-professor.html');
+
+    const tipo = usuarioLogado()?.tipo;
+    if (tipo !== 'professor' && tipo !== 'admin') {
+      document.querySelector('main').innerHTML = '<h1>Acesso restrito</h1><p>Esta página é exclusiva para professores.</p>';
+    }
+
+    async function carregarDisciplinas() {
+      const select = document.getElementById('disciplina_id');
+      try {
+        const { disciplinas } = await api.listarDisciplinas();
+        select.innerHTML = disciplinas.map(d => `<option value="${d.id}">${d.nome} (${d.curso_nome})</option>`).join('');
+      } catch (erro) {
+        select.innerHTML = `<option>${erro.message}</option>`;
+      }
+    }
+
+    document.getElementById('form-filtro').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const listaEl = document.getElementById('lista-alunos');
+      const disciplinaId = document.getElementById('disciplina_id').value;
+
+      try {
+        const { alunos } = await api.listarTurma(disciplinaId);
+        if (!alunos.length) {
+          listaEl.innerHTML = '<p>Nenhum aluno matriculado nesta disciplina.</p>';
+          document.getElementById('btn-salvar').style.display = 'none';
+          return;
+        }
+        listaEl.innerHTML = alunos.map(a => `
+          <label class="linha-item" style="cursor:pointer">
+            <span>${a.aluno_nome}</span>
+            <input type="checkbox" data-matricula="${a.matricula_id}" checked style="width:auto">
+          </label>`).join('');
+        document.getElementById('btn-salvar').style.display = 'inline-block';
+      } catch (erro) {
+        listaEl.innerHTML = `<p>${erro.message}</p>`;
+      }
+    });
+
+    document.getElementById('form-presenca').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const mensagem = document.getElementById('mensagem');
+      mensagem.className = 'mensagem';
+      const dataAula = document.getElementById('data_aula').value;
+
+      if (!dataAula) {
+        mensagem.textContent = 'Escolha a data da aula.';
+        mensagem.className = 'mensagem erro';
+        return;
+      }
+
+      const checkboxes = document.querySelectorAll('#lista-alunos input[type="checkbox"]');
+      try {
+        for (const cb of checkboxes) {
+          await api.registrarPresenca({
+            matricula_id: Number(cb.dataset.matricula),
+            data_aula: dataAula,
+            presente: cb.checked,
+          });
+        }
+        mensagem.textContent = 'Frequência registrada com sucesso.';
+        mensagem.className = 'mensagem sucesso';
+      } catch (erro) {
+        mensagem.textContent = erro.message;
+        mensagem.className = 'mensagem erro';
+      }
+    });
+
+    carregarDisciplinas();
+  </script>
+</body>
+</html>

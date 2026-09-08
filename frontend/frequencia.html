@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frequência — Portal Acadêmico</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <h1>Frequência</h1>
+    <p class="eyebrow">Percentual de presença por disciplina, calculado a partir das aulas registradas.</p>
+
+    <div id="lista-frequencia"><p>Carregando...</p></div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    exigirLogin();
+    montarNavegacao('frequencia.html');
+
+    async function carregar() {
+      const el = document.getElementById('lista-frequencia');
+      try {
+        const { resumo } = await api.resumoFrequencia();
+        el.innerHTML = resumo.length
+          ? resumo.map(r => `
+              <div class="linha-item">
+                <span>${r.disciplina_nome}</span>
+                <span>${r.presencas}/${r.total_aulas} aulas — <strong>${r.percentual}%</strong></span>
+              </div>`).join('')
+          : '<p>Nenhum registro de frequência ainda.</p>';
+      } catch (erro) {
+        el.innerHTML = `<p>${erro.message}</p>`;
+      }
+    }
+
+    carregar();
+  </script>
+</body>
+</html>

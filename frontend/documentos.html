@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentos — Portal Acadêmico</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <h1>Documentos</h1>
+    <p class="eyebrow">Envie seus documentos para validação da secretaria.</p>
+
+    <form id="form-documento">
+      <div>
+        <label for="tipo">Tipo de documento</label>
+        <select id="tipo">
+          <option value="RG">RG</option>
+          <option value="historico">Histórico escolar</option>
+          <option value="comprovante_residencia">Comprovante de residência</option>
+        </select>
+      </div>
+      <div>
+        <label for="arquivo">Arquivo</label>
+        <input type="file" id="arquivo" required>
+      </div>
+      <div id="mensagem" class="mensagem"></div>
+      <button type="submit" class="btn">Enviar documento</button>
+    </form>
+
+    <h2 style="margin-top:2rem">Meus documentos</h2>
+    <div id="lista-documentos"><p>Carregando...</p></div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    exigirLogin();
+    montarNavegacao('documentos.html');
+
+    async function carregarDocumentos() {
+      const el = document.getElementById('lista-documentos');
+      try {
+        const { documentos } = await api.meusDocumentos();
+        el.innerHTML = documentos.length
+          ? documentos.map(d => `
+              <div class="linha-item">
+                <span>${d.tipo} — ${d.nome_arquivo}</span>
+                <span class="tag ${d.status_validacao}">${d.status_validacao}</span>
+              </div>`).join('')
+          : '<p>Nenhum documento enviado ainda.</p>';
+      } catch (erro) {
+        el.innerHTML = `<p>${erro.message}</p>`;
+      }
+    }
+
+    document.getElementById('form-documento').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const mensagem = document.getElementById('mensagem');
+      mensagem.className = 'mensagem';
+
+      const formData = new FormData();
+      formData.append('tipo', document.getElementById('tipo').value);
+      formData.append('arquivo', document.getElementById('arquivo').files[0]);
+
+      try {
+        await api.enviarDocumento(formData);
+        mensagem.textContent = 'Documento enviado para validação.';
+        mensagem.className = 'mensagem sucesso';
+        document.getElementById('form-documento').reset();
+        carregarDocumentos();
+      } catch (erro) {
+        mensagem.textContent = erro.message;
+        mensagem.className = 'mensagem erro';
+      }
+    });
+
+    carregarDocumentos();
+  </script>
+</body>
+</html>

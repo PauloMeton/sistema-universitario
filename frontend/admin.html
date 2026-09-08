@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cursos e disciplinas — Portal Acadêmico</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <h1>Cursos e disciplinas</h1>
+    <p class="eyebrow">Cadastre cursos e disciplinas para que alunos possam se matricular.</p>
+
+    <h2>Novo curso</h2>
+    <form id="form-curso">
+      <div>
+        <label for="curso-nome">Nome do curso</label>
+        <input type="text" id="curso-nome" required>
+      </div>
+      <div>
+        <label for="curso-carga">Carga horária (horas)</label>
+        <input type="number" id="curso-carga" required>
+      </div>
+      <div id="mensagem-curso" class="mensagem"></div>
+      <button type="submit" class="btn">Criar curso</button>
+    </form>
+
+    <h2 style="margin-top:2.5rem">Nova disciplina</h2>
+    <form id="form-disciplina">
+      <div>
+        <label for="disciplina-nome">Nome da disciplina</label>
+        <input type="text" id="disciplina-nome" required>
+      </div>
+      <div>
+        <label for="disciplina-curso">Curso</label>
+        <select id="disciplina-curso" required></select>
+      </div>
+      <div>
+        <label for="disciplina-professor">Professor (opcional)</label>
+        <select id="disciplina-professor">
+          <option value="">Sem professor definido</option>
+        </select>
+      </div>
+      <div>
+        <label for="disciplina-vagas">Vagas</label>
+        <input type="number" id="disciplina-vagas" value="40">
+      </div>
+      <div id="mensagem-disciplina" class="mensagem"></div>
+      <button type="submit" class="btn">Criar disciplina</button>
+    </form>
+
+    <h2 style="margin-top:2.5rem">Disciplinas cadastradas</h2>
+    <div id="lista-disciplinas"><p>Carregando...</p></div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    exigirLogin();
+    montarNavegacao('admin.html');
+
+    if (usuarioLogado()?.tipo !== 'admin') {
+      document.querySelector('main').innerHTML = '<h1>Acesso restrito</h1><p>Esta página é exclusiva para administradores.</p>';
+    } else {
+      iniciar();
+    }
+
+    async function iniciar() {
+      await Promise.all([carregarCursosNoSelect(), carregarProfessores(), carregarDisciplinas()]);
+    }
+
+    async function carregarCursosNoSelect() {
+      const select = document.getElementById('disciplina-curso');
+      try {
+        const { cursos } = await api.listarCursos();
+        select.innerHTML = cursos.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+      } catch (erro) {
+        select.innerHTML = `<option>${erro.message}</option>`;
+      }
+    }
+
+    async function carregarProfessores() {
+      const select = document.getElementById('disciplina-professor');
+      try {
+        const { professores } = await api.listarProfessores();
+        professores.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.nome;
+          select.appendChild(opt);
+        });
+      } catch (erro) {
+        // silencioso — professor é opcional
+      }
+    }
+
+    async function carregarDisciplinas() {
+      const el = document.getElementById('lista-disciplinas');
+      try {
+        const { disciplinas } = await api.listarDisciplinas();
+        el.innerHTML = disciplinas.length
+          ? `<table><thead><tr><th>ID</th><th>Disciplina</th><th>Curso</th><th>Professor</th><th>Vagas</th></tr></thead><tbody>
+              ${disciplinas.map(d => `
+                <tr>
+                  <td>${d.id}</td>
+                  <td>${d.nome}</td>
+                  <td>${d.curso_nome}</td>
+                  <td>${d.professor_nome || '—'}</td>
+                  <td>${d.vagas}</td>
+                </tr>`).join('')}
+             </tbody></table>`
+          : '<p>Nenhuma disciplina cadastrada ainda.</p>';
+      } catch (erro) {
+        el.innerHTML = `<p>${erro.message}</p>`;
+      }
+    }
+
+    document.getElementById('form-curso').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const mensagem = document.getElementById('mensagem-curso');
+      mensagem.className = 'mensagem';
+      try {
+        await api.criarCurso({
+          nome: document.getElementById('curso-nome').value,
+          carga_horaria: Number(document.getElementById('curso-carga').value),
+        });
+        mensagem.textContent = 'Curso criado com sucesso.';
+        mensagem.className = 'mensagem sucesso';
+        document.getElementById('form-curso').reset();
+        carregarCursosNoSelect();
+      } catch (erro) {
+        mensagem.textContent = erro.message;
+        mensagem.className = 'mensagem erro';
+      }
+    });
+
+    document.getElementById('form-disciplina').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const mensagem = document.getElementById('mensagem-disciplina');
+      mensagem.className = 'mensagem';
+      try {
+        await api.criarDisciplina({
+          nome: document.getElementById('disciplina-nome').value,
+          curso_id: Number(document.getElementById('disciplina-curso').value),
+          professor_id: document.getElementById('disciplina-professor').value || null,
+          vagas: Number(document.getElementById('disciplina-vagas').value),
+        });
+        mensagem.textContent = 'Disciplina criada com sucesso.';
+        mensagem.className = 'mensagem sucesso';
+        document.getElementById('form-disciplina').reset();
+        carregarDisciplinas();
+      } catch (erro) {
+        mensagem.textContent = erro.message;
+        mensagem.className = 'mensagem erro';
+      }
+    });
+  </script>
+</body>
+</html>
