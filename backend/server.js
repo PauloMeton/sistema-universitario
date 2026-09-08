@@ -1,5 +1,6 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const { conectarMongo } = require('./config/mongo');
@@ -23,6 +24,14 @@ app.use('/api/admin', adminRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+const frontendPath = path.join(__dirname, '..', 'frontend');
+app.use(express.static(frontendPath));
+
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
 const PORTA = process.env.PORT || 3000;
